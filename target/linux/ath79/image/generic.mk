@@ -19,14 +19,10 @@ define Build/add-elecom-factory-initramfs
 	-f 0x70000 -S 0x01100000 \
 	-i $@ -o $@.factory
 
-  ( \
-	echo -n -e "ELECOM\x00\x00$(product)" | dd bs=40 count=1 conv=sync; \
-	echo -n "0.00" | dd bs=16 count=1 conv=sync; \
-	dd if=$@.factory; \
-  ) > $@.factory.new
+  $(call Build/elecom-product-header,$(product) $@.factory)
 
-  if [ "$$(stat -c%s $@.factory.new)" -le $$(($(subst k,* 1024,$(subst m, * 1024k,$(IMAGE_SIZE))))) ]; then \
-	mv $@.factory.new $(BIN_DIR)/$(KERNEL_INITRAMFS_PREFIX)-factory.bin; \
+  if [ "$$(stat -c%s $@.factory)" -le $$(($(subst k,* 1024,$(subst m, * 1024k,$(IMAGE_SIZE))))) ]; then \
+	mv $@.factory $(BIN_DIR)/$(KERNEL_INITRAMFS_PREFIX)-factory.bin; \
   else \
 	echo "WARNING: initramfs kernel image too big, cannot generate factory image" >&2; \
   fi
@@ -360,6 +356,18 @@ define Device/aruba_ap-105
   DEVICE_PACKAGES := kmod-i2c-gpio kmod-tpm-i2c-atmel
 endef
 TARGET_DEVICES += aruba_ap-105
+
+define Device/asus_rp-ac66
+  SOC := qca9563
+  DEVICE_VENDOR := ASUS
+  DEVICE_MODEL := RP-AC66
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | \
+	append-rootfs | pad-rootfs
+  DEVICE_PACKAGES := kmod-ath10k-ct-smallbuffers ath10k-firmware-qca988x-ct \
+	rssileds -swconfig
+endef
+TARGET_DEVICES += asus_rp-ac66
 
 define Device/atheros_db120
   $(Device/loader-okli-uimage)
@@ -1561,6 +1569,7 @@ define Device/nec_wg800hp
 	append-rootfs | pad-rootfs | check-size | \
 	xor-image -p 6A57190601121E4C004C1E1201061957 -x | nec-fw LASER_ATERM
   DEVICE_PACKAGES := kmod-ath10k-ct-smallbuffers ath10k-firmware-qca9887-ct-full-htt
+  DEFAULT := n
 endef
 TARGET_DEVICES += nec_wg800hp
 
@@ -1924,6 +1933,17 @@ define Device/openmesh_om5p
 endef
 TARGET_DEVICES += openmesh_om5p
 
+define Device/openmesh_om5p-ac-v1
+  $(Device/openmesh_common_64k)
+  SOC := qca9558
+  DEVICE_MODEL := OM5P-AC
+  DEVICE_VARIANT := v1
+  DEVICE_PACKAGES += kmod-ath10k-ct ath10k-firmware-qca988x-ct
+  OPENMESH_CE_TYPE := OM5PAC
+  SUPPORTED_DEVICES += om5p-ac
+endef
+TARGET_DEVICES += openmesh_om5p-ac-v1
+
 define Device/openmesh_om5p-ac-v2
   SOC := qca9558
   DEVICE_VENDOR := OpenMesh
@@ -1934,6 +1954,15 @@ define Device/openmesh_om5p-ac-v2
   SUPPORTED_DEVICES += om5p-acv2
 endef
 TARGET_DEVICES += openmesh_om5p-ac-v2
+
+define Device/openmesh_om5p-an
+  $(Device/openmesh_common_64k)
+  SOC := ar9344
+  DEVICE_MODEL := OM5P-AN
+  OPENMESH_CE_TYPE := OM5P
+  SUPPORTED_DEVICES += om5p-an
+endef
+TARGET_DEVICES += openmesh_om5p-an
 
 define Device/pcs_cap324
   SOC := ar9344
@@ -2425,15 +2454,18 @@ endef
 TARGET_DEVICES += xiaomi_mi-router-4q
 
 define Device/xwrt_csac
+  $(Device/loader-okli-uimage)
   SOC := qca9563
   DEVICE_VENDOR := XWRT
   DEVICE_MODEL := CSAC
-  KERNEL_SIZE := 1472k
-  IMAGE_SIZE := 16000k
-  IMAGES += factory-10.bin factory-05.bin
-  IMAGE/sysupgrade.bin := append-rootfs | pad-rootfs | pad-to 14528k | append-kernel | check-size | append-metadata
-  IMAGE/factory-10.bin := $$(IMAGE/sysupgrade.bin) | xwrt_csac10-factory $(1)
-  IMAGE/factory-05.bin := $$(IMAGE/sysupgrade.bin) | xwrt_csac05-factory $(1)
+  IMAGE_SIZE := 14464k
+  LOADER_FLASH_OFFS := 0x60000
+  KERNEL := kernel-bin | append-dtb | lzma | uImage lzma -M 0x4f4b4c49
+  IMAGES += breed-factory.bin factory-10.bin factory-05.bin
+  IMAGE/breed-factory.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-rootfs | pad-rootfs | \
+			     prepad-okli-kernel $(1) | pad-to 14528k | append-okli-kernel $(1)
+  IMAGE/factory-10.bin := $$(IMAGE/breed-factory.bin) | xwrt_csac10-factory $(1)
+  IMAGE/factory-05.bin := $$(IMAGE/breed-factory.bin) | xwrt_csac05-factory $(1)
   DEVICE_PACKAGES := kmod-leds-reset kmod-ath10k-ct ath10k-firmware-qca9888-ct kmod-usb-core kmod-usb2
 endef
 TARGET_DEVICES += xwrt_csac
