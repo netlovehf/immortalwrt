@@ -221,6 +221,26 @@ define Device/iptime_a604m
 endef
 TARGET_DEVICES += iptime_a604m
 
+define Device/joowin_jw-wr758ac
+  IMAGE_SIZE := 7872k
+  DEVICE_VENDOR := Joowin
+  DEVICE_MODEL := WR758AC
+endef
+
+define Device/joowin_jw-wr758ac-v1
+  $(Device/joowin_jw-wr758ac)
+  DEVICE_PACKAGES := kmod-mt76x2
+  DEVICE_VARIANT := V1
+endef
+TARGET_DEVICES += joowin_jw-wr758ac-v1
+
+define Device/joowin_jw-wr758ac-v2
+  $(Device/joowin_jw-wr758ac)
+  DEVICE_PACKAGES := kmod-mt7615e kmod-mt7663-firmware-ap
+  DEVICE_VARIANT := V2
+endef
+TARGET_DEVICES += joowin_jw-wr758ac-v2
+
 define Device/jotale_js76x8
   DEVICE_VENDOR := Jotale
   DEVICE_MODEL := JS76x8
@@ -429,6 +449,7 @@ define Device/tplink_archer-c20-v5
   TPLINK_HWREVADD := 0x5
   DEVICE_PACKAGES := kmod-mt76x0e
   IMAGES := sysupgrade.bin
+  DEFAULT := n
 endef
 TARGET_DEVICES += tplink_archer-c20-v5
 
@@ -460,6 +481,7 @@ define Device/tplink_archer-c50-v4
   DEVICE_PACKAGES := kmod-mt76x2
   IMAGES := sysupgrade.bin
   SUPPORTED_DEVICES += tplink,c50-v4
+  DEFAULT := n
 endef
 TARGET_DEVICES += tplink_archer-c50-v4
 
